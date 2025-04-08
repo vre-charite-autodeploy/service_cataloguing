@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cataloguing
+  namespace: utility
+  labels:
+    app: cataloguing
+    env: charite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cataloguing
+      env: charite
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 33%
+  template:
+    metadata:
+      labels:
+        app: cataloguing
+        env: charite
+    spec:
+      containers:
+        - name: cataloguing
+          image: s-hdp-vre-v007.charite.de/cataloguing:<VERSION>
+          ports:
+            - containerPort: 5064
+          env:
+          - name: env
+            value: "charite"
+          - name: CONFIG_CENTER_ENABLED
+            value: "true"
+          - name: CONFIG_CENTER_BASE_URL
+            value: "http://common.utility:5062/"
+          readinessProbe:
+            tcpSocket:
+              port: 5064
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "500m"
+            limits:
+              memory: "500Mi"
+              cpu: "500m"
+      nodeSelector:
+        namespace: utility
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cataloguing
+  namespace: utility
+  labels:
+    app: cataloguing
+    env: charite
+spec:
+  ports:
+  - name: http
+    port: 5064
+    targetPort: 5064
+    nodeport:
+  selector:
+    app: cataloguing
+    env: charite
+  type: LoadBalancer
